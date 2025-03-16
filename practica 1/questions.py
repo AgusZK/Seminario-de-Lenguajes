@@ -22,10 +22,12 @@ answers = [
 ]
 # Índice de la respuesta correcta para cada pregunta, el el mismo orden que las preguntas
 correct_answers_index = [1,2,0,3,1]
-#2, 3, 1, 4, 2
+#2, 3, 1, 4, 2 correctas
+
+questions_to_ask = random.choices(list(zip(questions,answers,correct_answers_index)), k=3)
 
 # El usuario deberá contestar 3 preguntas
-puntos = 0
+puntos = 0.0
 for _ in range(3):
     # Se selecciona una pregunta aleatoria
     question_index = random.randint(0, len(questions) - 1)
@@ -37,23 +39,22 @@ for _ in range(3):
 
     # El usuario tiene 2 intentos para responder correctamente
     for intento in range(2):
-        user_answer = int(input("Respuesta: ")) - 1
+        user_answer = input("Respuesta: ")
         # Se verifica si la respuesta es correcta
-        if user_answer == correct_answers_index[question_index]:
-            print("¡Correcto!")
-            puntos = puntos + 1
-            break
-        elif user_answer > len(questions):
+        if not user_answer.isnumeric() or int(user_answer)-1 not in range(len(questions)):
             print("Respuesta no valida")
-            exit_status = 1
+            exit(1)
+            break
+        elif int(user_answer) - 1 == correct_answers_index[question_index]:
+            print("¡Correcto!")
+            puntos +=1
             break
         else:
         # Si el usuario no responde correctamente después de 2 intentos,
         # se muestra la respuesta correcta
+         puntos -= 0.5
+         if intento == 1 
          print("Incorrecto. La respuesta correcta es:")
-         puntos = puntos - 0.5
          print(answers[question_index][correct_answers_index[question_index]])
          break
-        # Se imprime un blanco al final de la pregunta
-        print()
 print("Puntos Totales: " + str(puntos))
