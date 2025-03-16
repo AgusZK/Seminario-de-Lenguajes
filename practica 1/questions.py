@@ -24,7 +24,7 @@ answers = [
 correct_answers_index = [1,2,0,3,1]
 #2, 3, 1, 4, 2 correctas
 
-questions_to_ask = random.choices(list(zip(questions,answers,correct_answers_index)), k=3)
+questions_to_ask = random.sample(list(zip(questions,answers,correct_answers_index)), k=3)
 
 # El usuario deberá contestar 3 preguntas
 puntos = 0.0
@@ -55,6 +55,6 @@ for preg,res,correct in questions_to_ask:
         # Resto puntos
          puntos -= 0.5
          if intento == 1:
-            print("Incorrecto. La respuesta correcta es: " + str(res[correct]))
-            
-print("Puntos Totales: " + str(puntos))
+            print(f'Incorrecto. La respuesta correcta es: Opcion {correct + 1}: {res[correct]}')
+
+print(f'Puntos Totales: {puntos} ')
