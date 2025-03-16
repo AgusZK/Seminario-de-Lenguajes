@@ -28,33 +28,33 @@ questions_to_ask = random.choices(list(zip(questions,answers,correct_answers_ind
 
 # El usuario deberá contestar 3 preguntas
 puntos = 0.0
-for _ in range(3):
+for preg,res,correct in questions_to_ask:
     # Se selecciona una pregunta aleatoria
-    question_index = random.randint(0, len(questions) - 1)
- 
-    # Se muestra la pregunta y las respuestas posibles
-    print(questions[question_index])
-    for i, answer in enumerate(answers[question_index]):
-        print(f"{i + 1}. {answer}")
+    # Recorro la lista de respuestas e imprimo
+    print (preg)
+    for i, r in enumerate(res):
+        print (f'{i + 1}: {r}')
+
 
     # El usuario tiene 2 intentos para responder correctamente
     for intento in range(2):
         user_answer = input("Respuesta: ")
-        # Se verifica si la respuesta es correcta
-        if not user_answer.isnumeric() or int(user_answer)-1 not in range(len(questions)):
+
+    # Checkeo si ingreso num fuera de rango o cadena, si da true exiteo con 1
+        if not user_answer.isnumeric() or int(user_answer)-1 not in range(len(res)):
             print("Respuesta no valida")
             exit(1)
-            break
-        elif int(user_answer) - 1 == correct_answers_index[question_index]:
+
+    # Se verifica si la respuesta es correcta y sumo puntos   
+        if int(user_answer) - 1 == correct:
+            puntos += 1
             print("¡Correcto!")
-            puntos +=1
             break
         else:
-        # Si el usuario no responde correctamente después de 2 intentos,
-        # se muestra la respuesta correcta
+        # Si el usuario no responde correctamente después de 2 intentos, se muestra la respuesta correcta
+        # Resto puntos
          puntos -= 0.5
-         if intento == 1 
-         print("Incorrecto. La respuesta correcta es:")
-         print(answers[question_index][correct_answers_index[question_index]])
-         break
+         if intento == 1:
+            print("Incorrecto. La respuesta correcta es: " + str(res[correct]))
+            
 print("Puntos Totales: " + str(puntos))
