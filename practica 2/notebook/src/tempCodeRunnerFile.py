@@ -1,0 +1,2 @@
+
+words = ["música", "charla", "entretenimiento"]
