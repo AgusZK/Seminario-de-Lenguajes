@@ -24,7 +24,8 @@ zen_text = ["Beautiful is better than ugly.",
 vocals = ["A", "E", "I", "O", "U", "a", "e", "i", "o", "u"]
 
 #for elem in zen_text:
-#    if elem[1] in vocals:
+#    word = elem.split()
+#    if (word[1][0] in vocals):
 #        print(elem)
 
 # PUNTO 2
