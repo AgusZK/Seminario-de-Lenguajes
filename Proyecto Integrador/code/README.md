@@ -44,11 +44,16 @@ Todo esto desde una interfaz web simple y rápida, construida con **Streamlit**.
    cd code
    
 
-3. Instalá las dependencias y corre la app:
+4. Instalá las dependencias y corre la app:
    ```bash
    pip install -r requirements.txt
    streamlit run app/inicio.py
-
+   ```
+   O, si clonaste el repositorio directamente y estás en la raiz, podés usar esta otra forma:
+   ```bash
+   pip install-r requierements.txt
+   streamlit run "Proyecto integrador/code/app/inicio.py"
+   ```
 ---
 
 ## 📂 ¿Cómo actualizar los datos?
@@ -60,8 +65,8 @@ Todo esto desde una interfaz web simple y rápida, construida con **Streamlit**.
 ---
 
 > ⚠️ **Importante:**  
-> - La aplicación **no implementa un mecanismo automático para evitar duplicados**.  
-> Si se cargan archivos que ya fueron incorporados anteriormente (por ejemplo, un mismo trimestre), la información se agregará nuevamente, generando duplicación de datos.  
+> - La aplicación **implementa un mecanismo automático para evitar duplicados**.  
+> Si se cargan archivos que ya fueron incorporados anteriormente (por ejemplo, un mismo trimestre), se le informara al usuario que ingrese nuevos datos  
 > - Aunque se restringe la carga de archivos que no sean `.txt`, el sistema asume que el usuario cargará archivos **adecuados y correspondientes a cada categoría** (por ejemplo, individuos y hogares).  
 > Si se cargan archivos incorrectos o mal estructurados, pueden producirse errores o resultados inesperados.
 
