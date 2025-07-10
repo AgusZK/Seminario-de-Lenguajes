@@ -1,6 +1,11 @@
 
 from pipeline.rutas import PROCESADOS_PATH
 import csv
+import pandas as pd
+
+individuos  = pd.read_csv(PROCESADOS_PATH/"individuos.csv", sep=";", low_memory=False)
+hogares  = pd.read_csv(PROCESADOS_PATH/"hogares.csv", sep=";", low_memory=False)
+
 
 aglomerados_eph = {
     "Gran La Plata": "2", "Bahía Blanca-Cerri": "3", "Gran Rosario": "4",
@@ -15,6 +20,42 @@ aglomerados_eph = {
     "Mar del Plata": "34", "Río Cuarto": "36", "San Nicolás-Villa Constitución": "38",
     "Rawson-Trelew": "91", "Viedma-Carmen de Patagones": "93"
 }
+
+
+aglomerados_eph_nombre = {
+    "2": "Gran La Plata", "3": "Bahía Blanca-Cerri", "4": "Gran Rosario",
+    "5": "Gran Santa Fe", "6": "Gran Paraná", "7": "Posadas",
+    "8": "Gran Resistencia", "9": "Comodoro Rivadavia-Rada Tilly", "10": "Gran Mendoza",
+    "12": "Corrientes", "13": "Gran Córdoba", "14": "Concordia",
+    "15": "Formosa", "17": "Neuquén-Plottier", "18": "Santiago del Estero-La Banda",
+    "19": "Jujuy-Palpalá", "20": "Río Gallegos", "22": "Gran Catamarca",
+    "23": "Gran Salta", "25": "La Rioja", "26": "Gran San Luis",
+    "27": "Gran San Juan", "29": "Gran Tucumán-Tafí Viejo", "30": "Santa Rosa-Toay",
+    "31": "Ushuaia-Río Grande", "32": "Ciudad Autónoma de Buenos Aires", "33": "Partidos del Gran Buenos Aires",
+    "34": "Mar del Plata", "36": "Río Cuarto", "38": "San Nicolás-Villa Constitución",
+    "91": "Rawson-Trelew", "93": "Viedma-Carmen de Patagones"
+}
+
+
+def fechas_recientes(dataframe):
+    """Devuelve las fechas mas recientes del dataFrame pasado por parametro"""
+    anio = dataframe["ANO4"].max()
+    tris = dataframe[dataframe["ANO4"] == anio]["TRIMESTRE"].max()
+
+    return anio,tris
+
+def mostrarAglomerados():
+    """Funcion auxiliar que imprime los aglomerados disponibles"""
+    text = "Aglomerados disponibles: \n"
+    cont = 0
+    for item in aglomerados_eph:
+       cont+=1
+       text+= f"{item}, "
+       if(cont == 4):
+           text+= "\n"
+           cont = 0
+
+    print(text)
 #----------------EJERCICIO 1---------------------------   
 def porcentaje_alfabetizacion():
     """ Informa los porcentajes de la gente que es capaz/incapaz de leer
@@ -141,71 +182,67 @@ def informar_desocupacion():
 
 #----------------EJERCICIO 4---------------------------   
 def informar_rankings():
-  
-    fechas = {}
-    with open(PROCESADOS_PATH / "individuos.csv") as archivo_individuos:
-        lector = csv.DictReader(archivo_individuos, delimiter=";")
-        for row in lector:
-            anio = int(row["ANO4"])
-            trimestre = int(row["TRIMESTRE"])
-            if anio not in fechas:
-                fechas[anio] = set()
-            fechas[anio].add(trimestre)
+    """Informa un ranking de aglomerado y devuelve en un dataFrame el ranking si se pudo procesar"""
+    nivel ="NIVEL_ED_str"
+    pondera = "PONDERA"
+    hogar = "NRO_HOGAR"
+    aglo = "AGLOMERADO"
+    ocupantes = "IX_TOT"
+    in_anio_max, in_tri_max = fechas_recientes(individuos)
+    ho_anio_max,ho_tri_max = fechas_recientes(hogares)
 
-    ultimo_anio = max(fechas)
-    ultimo_trimestre = max(fechas[ultimo_anio])
 
-    
-    hogares_con_universitarios = set()
-    codusu_aglomerado = {}
+    if(in_anio_max == ho_anio_max) and (in_tri_max == ho_tri_max):
+        indi_copia = individuos.copy()
+        hoga_copia = hogares.copy()
 
-    with open(PROCESADOS_PATH / "individuos.csv") as archivo_individuos:
-        lector = csv.DictReader(archivo_individuos, delimiter=";")
-        for row in lector:
-            if int(row["ANO4"]) == ultimo_anio and int(row["TRIMESTRE"]) == ultimo_trimestre:
-                codusu = row["CODUSU"]
-                aglo = int(row["AGLOMERADO"])
-                codusu_aglomerado[codusu] = aglo
-                if row["NIVEL_ED"] == "6":
-                    hogares_con_universitarios.add(codusu)
+        #Mascara de individuos, por año maximo, trimestre maximo, y nivel educacion igual a universitario
+        mascara_indi = ( (indi_copia["ANO4"] == in_anio_max) &\
+        (indi_copia["TRIMESTRE"] == in_tri_max) &\
+        (indi_copia[nivel] == "Superior o universitario"))
 
-    
-    totales_por_aglo = {}  # aglo -> total hogares
-    con_univ_por_aglo = {}  # aglo -> hogares con universitarios
 
-    with open(PROCESADOS_PATH / "hogares.csv") as archivo_hogares:
-        lector = csv.DictReader(archivo_hogares, delimiter=";")
-        for row in lector:
-            codusu = row["CODUSU"]
-            if codusu in codusu_aglomerado:
-                aglo = codusu_aglomerado[codusu]
-                if int(row["IX_TOT"]) >= 2:
-                    pondera = int(row["PONDERA"])
-                    
-                    if aglo not in totales_por_aglo:
-                        totales_por_aglo[aglo] = 0
-                    if aglo not in con_univ_por_aglo:
-                        con_univ_por_aglo[aglo] = 0
-                    
-                    totales_por_aglo[aglo] += pondera
+        indi_copia = indi_copia[mascara_indi]
+        
+        lista_hogares = indi_copia[hogar].to_list()
+        #declaro una mascara para filtrar el dataFrame de hogares por año maximo, tris maximo, hogares que esten en la lista, y cant ocupantes > 2
+        mascara_hogar =(  (hoga_copia["ANO4"] == ho_anio_max) &\
+          (hoga_copia["TRIMESTRE"] == ho_tri_max)&\
+          (hoga_copia[hogar].isin(lista_hogares) )&\
+            (hoga_copia[ocupantes] > 2) )
+        
 
-                    if codusu in hogares_con_universitarios:
-                        con_univ_por_aglo[aglo] += pondera
+        hoga_copia = hoga_copia[mascara_hogar]
 
-    
-    ranking = []
-    for aglo in totales_por_aglo:
-        total = totales_por_aglo[aglo]
-        con_univ = con_univ_por_aglo.get(aglo, 0)
-        porcentaje = (con_univ / total) * 100 if total > 0 else 0
-        ranking.append((aglo, porcentaje))
+        mascara_hogar_total =((hogares["ANO4"] == ho_anio_max) &\
+          (hogares["TRIMESTRE"] == ho_tri_max))
+        
+        cumplen = hoga_copia.groupby(aglo)[pondera].sum().reset_index()
+        hoga_total = hogares[mascara_hogar_total].groupby(aglo)[pondera].sum().reset_index()
 
-    ranking.sort(key=lambda x: x[1], reverse=True)
+        cumplen[aglo] = cumplen[aglo].astype(str)
+        #Añado el nombre del aglomerado
+        cumplen["Nombre"] = cumplen[aglo].map(aglomerados_eph_nombre)
+        #Renombro la columna pondera por la cantidad universitarios
+        cumplen.rename(columns = {"PONDERA": "Universitarios"},inplace = True)
+        #Añado el total 
+        cumplen["Total"] = hoga_total[pondera].values
+        #Añado el porcentaje
+        cumplen["Porcentaje"] = round((cumplen["Universitarios"] / cumplen["Total"]) * 100,2)
+        #ordeno
+        cumplen.sort_values(by="Porcentaje",ascending=False,inplace= True)
+        
+        ranking = cumplen.head(5)
+        print("Ranking de los 5 aglomerados : ")
+        for i, fila in ranking.iterrows():
+            print(f"El aglomerado {fila["Nombre"]} posee un porcentaje de {fila["Porcentaje"]} con 2 o mas universitarios ")
+            print("-"*105)
 
-    print(" Ranking de aglomerados con mayor % de hogares (2+ ocupantes) con universitarios:")
-    for aglo, porcentaje in ranking[:5]:
-        print(f"Aglomerado {aglo}: {porcentaje:.2f}%")
-    print(f"Datos correspondientes al año {ultimo_anio}, trimestre {ultimo_trimestre}")
+        return ranking
+    else:
+        print("Los datos de los archivos no coinciden")
+        archivo_vacio = pd.DataFrame()
+        return archivo_vacio
 
 #----------------EJERCICIO 5---------------------------   
 def informar_porcentaje_viviendas_ocupadas():
@@ -236,7 +273,7 @@ def informar_porcentaje_viviendas_ocupadas():
     #ordeno el diccionario x orden numerico de aglomerado
         for clave,dato in sorted(info_aglo.items(), key= lambda x: int(x[0])):
             porcentaje = round(dato["propiedad propia"] / dato["total"] * 100,2 )
-            print(f'La cantidad de viviendas ocupadas en :{clave}  es de {porcentaje} %')
+            print(f'En {aglomerados_eph_nombre[clave]} el {porcentaje} % de las viviendas estan ocupadas por sus propietarios')
 
 
 #----------------EJERCICIO 6---------------------------   
@@ -291,8 +328,8 @@ def informar_porcentaje_aglomerado_universitario():
     else:
         for clave,dato in sorted(info.items(), key= lambda x: int(x[0])):
             porcentaje = round(dato["universitarios"] / dato["total"] * 100,2 )
-            print(f"En el aglomerado :{clave}")
-            print(f'Cursaron la universidad o superior almenos un {porcentaje} %')
+            print(f"En {aglomerados_eph_nombre[clave]} : \n" 
+            f"Cursaron la universidad o superior almenos un {porcentaje} %")
             
 #----------------EJERCICIO 8---------------------------   
             
@@ -334,6 +371,7 @@ def tabla_de_aglomerados_mayores_edad(tabla = {}):
     """Retorna una tabla ordenada por año y trimestre de un aglomerado en donde se informa
         el nivel maximo de estudio que hizo una persona"""
 
+    mostrarAglomerados()
     aglomerado = input("elija un aglomerados de los ya mostrados")
     if(aglomerado in aglomerados_eph):
         #si esta el aglomerados entonces busco en el archivo los datos
@@ -349,7 +387,7 @@ def tabla_de_aglomerados_mayores_edad(tabla = {}):
                     tris = row["TRIMESTRE"]
                     aglo = row["AGLOMERADO"]
                     educacion = row["NIVEL_ED_str"]
-                    edad = row["CH06"]
+                    edad = int(row["CH06"])
                     pondera = int(row["PONDERA"])
 
                     if(anio not in tabla):
@@ -363,7 +401,7 @@ def tabla_de_aglomerados_mayores_edad(tabla = {}):
                             "Superior o universitario": 0
                         }
                         #Si el aglomerado es el mismo que el elegido y si es mayor de edad elegida 
-                    if(aglo == aglomerado_index) and (edad >= "18"):
+                    if(aglo == aglomerado_index) and (edad >= 18):
                         match educacion:
                             case "Primario incompleto":
                                 tabla[anio][tris]["Primario incompleto"] += pondera
@@ -401,7 +439,7 @@ def tabla_de_aglomerados_mayores_edad(tabla = {}):
 #----------------EJERCICIO 10---------------------------   
 
 def mayores_de_edad_sin_secundario():
-
+    mostrarAglomerados()
     aglo_1 = input("Ingrese un aglomerado para hacer la tabla")
     aglo_2 = input("Ingrese un segundo aglomerado")
 
@@ -418,7 +456,7 @@ def mayores_de_edad_sin_secundario():
                 for row in lector:
                     anio = row["ANO4"]
                     tris = row["TRIMESTRE"]
-                    edad = row["CH06"]
+                    edad = int(row["CH06"])
                     educacion = row["NIVEL_ED_str"]
                     aglo = row["AGLOMERADO"]
                     pondera = int(row["PONDERA"])
@@ -441,11 +479,11 @@ def mayores_de_edad_sin_secundario():
 
                     if (aglo == aglo1_index):
                         informacion[anio][tris][aglo_1]["total"] += pondera
-                        if(edad > "18") and (educacion == "Secundario incompleto"):
+                        if(edad > 18) and (educacion == "Secundario incompleto"):
                             informacion[anio][tris][aglo_1]["Secundario incompleto"] += pondera
                     if(aglo == aglo2_index):
                         informacion[anio][tris][aglo_2]["total"] += pondera
-                        if(edad > "18") and (educacion == "Secundario incompleto"):
+                        if(edad > 18) and (educacion == "Secundario incompleto"):
                             informacion[anio][tris][aglo_2]["Secundario incompleto"] += pondera
         except FileNotFoundError:
             print("Archivo no encontrado")
@@ -529,8 +567,8 @@ def aglomerados_precarios():
                 minimo = dato["porcentaje"]
                 aglo_min = aglomerado
             
-        print(f" el aglomerado con mayor porcentaje fue : {aglo_max} con {float(maximo)}%")
-        print(f" el aglomerado con menor porcentaje fue : {aglo_min} con {float(minimo)}%")
+        print(f" el aglomerado con mayor porcentaje fue : {aglomerados_eph_nombre[aglo_max]} con {float(maximo)}%")
+        print(f" el aglomerado con menor porcentaje fue : {aglomerados_eph_nombre[aglo_min]} con {float(minimo)}%")
 
 #----------------EJERCICIO 12---------------------------   
 

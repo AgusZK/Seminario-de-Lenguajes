@@ -1,5 +1,6 @@
 import os
 import csv
+from pathlib import Path
 from pipeline.rutas import INDIVIDUOS_PATH, HOGARES_PATH, PROCESADOS_PATH
 
 # ------------- FUNCIONES GENERALES INDIVIDUOS ------------------
@@ -105,7 +106,7 @@ def agregar_material_techumbre(row):
         row['MATERIAL_TECHUMBRE'] = 'Material durable'
     elif 5 <= material <= 7:
         row['MATERIAL_TECHUMBRE'] = 'Material precario'
-    elif material == '9':
+    elif material == 9:
         row['MATERIAL_TECHUMBRE'] = 'No Aplica'            
 
     return row
@@ -137,18 +138,23 @@ def agregar_condicion_habitabilidad(row):
     techo = row['MATERIAL_TECHUMBRE']
     piso = row['IV3']
 
-    if all(x == '1' for x in [tiene_agua, origen_agua, posee_banio, piso]) and techo == 'Material durable':
-        row['CONDICION_DE_HABITABILIDAD'] = 'Buena'
-    
-    elif posee_banio == '1' and tiene_agua in ['1', '2'] and origen_agua in ['1', '2'] and piso in ['1', '2'] and techo == 'Material durable':
-         row['CONDICION_DE_HABITABILIDAD'] = 'Saludable'
+    if posee_banio != '1':
+       row['CONDICION_DE_HABITABILIDAD'] = 'Insuficiente'
+       return row
 
-    elif posee_banio == '1' and (tiene_agua == '3' or origen_agua == '3') and piso in ['1', '2'] and techo != 'Material durable':
-         row['CONDICION_DE_HABITABILIDAD'] ='Regular'
+    # Tiene baño, analizo el resto
+    match (tiene_agua, origen_agua, piso, techo):
+        case ('1', '1', '1', 'Material durable'):
+            row['CONDICION_DE_HABITABILIDAD'] = 'Buena'
 
-    else:
-         row['CONDICION_DE_HABITABILIDAD'] ='Insuficiente'
+        case (agua, origen, piso_mat, 'Material durable') if agua in ['1', '2'] and origen in ['1', '2'] and piso_mat in ['1', '2']:
+            row['CONDICION_DE_HABITABILIDAD'] = 'Saludable'
 
+        case (agua, origen, piso_mat, _) if '3' in [agua, origen] and piso_mat in ['1', '2']:
+            row['CONDICION_DE_HABITABILIDAD'] = 'Regular'
+
+        case _:
+            row['CONDICION_DE_HABITABILIDAD'] = 'Insuficiente'
     return row
 
 # ------ LECTURA DE ARCHIVOS CRUDOS PARA PROCESARLOS FINALMENTE EN UN ARCHIVO .CSV ------
@@ -190,28 +196,39 @@ nombres_individuos =["CH04_str","NIVEL_ED_str", "CONDICION_LABORAL","UNIVERSITAR
 funciones_hogares = [agregar_tipo_hogar,agregar_material_techumbre,agregar_densidad_hogar, agregar_condicion_habitabilidad]
 nombres_hogares =["TIPO_HOGAR","MATERIAL_TECHUMBRE", "DENSIDAD_HOGAR", "CONDICION_DE_HABITABILIDAD"]
 
-def reemplazar(file_path,funciones,cadenas):
-    """ Obtiene el path del archivo , lista de funciones y lista de encabezados por parametros.
-        Ambas listas deben coincidir en orden ya que son 1-1 
-        Agrega todos los encabezados y aplica cada funcion especifica a las hileras. 
-        Genera una lista de hileras con informacion modificada que luego se escribe en el archivo, modificando el original """
-    
-    with file_path.open('r') as file:
-        reader = csv.DictReader(file, delimiter=';')
-        # AGREGO TODOS LOS NUEVOS ENCABEZADOS
-        fieldnames = reader.fieldnames + cadenas
 
-        # POR CADA FILA, APLICO FUNCION DE LA LISTA DE FUNCIONES Y AGREGO EL NUEVO CONTENIDO EN FILAS_NUEVAS
-        filas_nuevas = []
+
+def reemplazar(file_path: Path, funciones, cadenas):
+    """Procesa un archivo CSV aplicando funciones a cada fila.
+    
+    Guarda los resultados en un archivo temporal y luego reemplaza el original.
+    
+    Args:
+        file_path (Path): ruta del archivo original a procesar.
+        funciones (list): funciones que transforman una fila.
+        cadenas (list): nombres de los nuevos campos que se agregan.
+    """
+    # Crear ruta de archivo temporal en la misma carpeta (por seguridad)
+    archivo_salida = file_path.with_name(f"{file_path.stem}.tmp.csv")
+
+    with file_path.open('r', encoding='utf-8') as file_in, \
+         archivo_salida.open('w', encoding='utf-8', newline='') as file_out:
+
+        reader = csv.DictReader(file_in, delimiter=';')
+        fieldnames = reader.fieldnames + cadenas
+        writer = csv.DictWriter(file_out, fieldnames=fieldnames, delimiter=';')
+
+        writer.writeheader()
+
         for row in reader:
             for funcion in funciones:
                 row = funcion(row)
-            filas_nuevas.append(row)
+            writer.writerow(row)
 
-    with file_path.open('w') as procesados_file:
-        writer = csv.DictWriter(procesados_file,fieldnames=fieldnames, delimiter=';')
-        writer.writeheader()
-        writer.writerows(filas_nuevas)
+    # Reemplaza el archivo original con el procesado
+    archivo_salida.replace(file_path)
+
+
 
 # ------ OBTENCION DE RANGO DE FECHAS PARA SABER EL PERIODO EN EL QUE NUESTRO SISTEMA TIENE INFORMACION ------        
 def obtener_rango_fechas(dataset_path):
